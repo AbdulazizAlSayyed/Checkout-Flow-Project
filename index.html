@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Lumière</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+ 
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            ink: { 50:'#F7F6F4',100:'#EEECEA',200:'#D5D1CB',300:'#B8B0A5',400:'#978D82',500:'#756B5F',600:'#5A5049',700:'#3F3930',800:'#2A251D',900:'#1A1610' },
+            prime: { 50:'#EEF0FB',100:'#D5D9F5',200:'#ABB3EB',300:'#818DE1',400:'#5767D7',500:'#3347CC',600:'#2639A8',700:'#1C2B84',800:'#131E5F' },
+            gold: { 400:'#C9A84C',500:'#B8922E',600:'#9A7520' },
+          }
+        }
+      }
+    }
+  </script>
+<style>
+  
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#F5F3EF;min-height:100vh;
+      background-image:radial-gradient(ellipse at 20% 60%,rgba(51,71,204,.05) 0%,transparent 55%),
+                       radial-gradient(ellipse at 80% 10%,rgba(201,168,76,.05) 0%,transparent 50%)}
+
+    /* ── Step panels ── */
+    .step-panel{display:none;animation:stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards}
+    .step-panel.active{display:block}
+    .step-panel.back{animation:stepBack .38s cubic-bezier(.25,.46,.45,.94) forwards}
+    @keyframes stepIn  {from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+    @keyframes stepBack{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+
+    /* ── Inputs ── */
+    .fi{width:100%;padding:13px 15px;background:#fff;border:1.5px solid #E2DDD8;border-radius:10px;
+        font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;color:#2A251D;
+        transition:border-color .2s,box-shadow .2s;outline:none;appearance:none}
+    .fi:focus{border-color:#3347CC;box-shadow:0 0 0 3px rgba(51,71,204,.1)}
+    .fi.err{border-color:#E53E3E;box-shadow:0 0 0 3px rgba(229,62,62,.1)}
+    .fi.ok{border-color:#38A169}
+    .fl{display:block;font-size:12px;font-weight:700;color:#756B5F;margin-bottom:5px;
+        letter-spacing:.05em;text-transform:uppercase}
+    .em{font-size:12px;color:#E53E3E;margin-top:4px;display:none}
+    .em.show{display:block}
+
+    /* ── Progress ── */
+    .pdot{width:28px;height:28px;border-radius:50%;border:2px solid #D5D1CB;background:#fff;
+          display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+          color:#978D82;transition:all .3s;position:relative;flex-shrink:0}
+    .pstep.done .pdot{background:#3347CC;border-color:#3347CC;color:transparent}
+    .pstep.done .pdot::after{content:'✓';color:#fff;font-size:11px;position:absolute}
+    .pstep.curr .pdot{border-color:#3347CC;color:#3347CC}
+    .pline{height:2px;flex:1;background:#E2DDD8;margin:0 6px;transition:background .3s;min-width:12px}
+    .pline.done{background:#3347CC}
+
+    /* ── Card 3D ── */
+    .card-scene{width:100%;max-width:360px;height:196px;perspective:900px;margin:0 auto}
+    .card-3d{width:100%;height:100%;position:relative;transform-style:preserve-3d;
+             transition:transform .6s cubic-bezier(.4,0,.2,1)}
+    .card-3d.flip{transform:rotateY(180deg)}
+    .cface{position:absolute;width:100%;height:100%;border-radius:16px;
+           backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+    .cfront{background:linear-gradient(135deg,#1C2B84 0%,#3347CC 55%,#5767D7 100%)}
+    .cback{background:linear-gradient(135deg,#2A251D 0%,#3F3930 60%,#756B5F 100%);transform:rotateY(180deg)}
+    .cshine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%);pointer-events:none}
+
+    /* ── Spinner ── */
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;display:none}
+
+    /* ── Animations ── */
+    @keyframes pop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+    .pop{animation:pop .5s cubic-bezier(.34,1.56,.64,1) forwards}
+    @keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    .fu0{animation:fu .5s ease forwards}
+    .fu1{opacity:0;animation:fu .5s .14s ease forwards}
+    .fu2{opacity:0;animation:fu .5s .28s ease forwards}
+    .fu3{opacity:0;animation:fu .5s .42s ease forwards}
+
+    /* ── Misc ── */
+    .card-outer{border:1.5px solid #E2DDD8;border-radius:12px;padding:14px 16px;
+                background:#fff;transition:all .2s}
+    .shadow-card{box-shadow:0 1px 3px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.06)}
+    @media(max-width:640px){.card-scene{max-width:300px;height:166px}}
+
+    /* Select arrow */
+    select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23978D82'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:16px;padding-right:32px}
+
+    /* Tooltip */
+    .tip{position:relative;display:inline-flex}
+    .tip-box{visibility:hidden;width:180px;background:#2A251D;color:#fff;text-align:center;
+             border-radius:8px;padding:7px 10px;font-size:11px;position:absolute;z-index:20;
+             bottom:130%;left:50%;transform:translateX(-50%);opacity:0;transition:opacity .2s;pointer-events:none}
+    .tip:hover .tip-box{visibility:visible;opacity:1}
+
+    /* Review row */
+    .rrow{display:grid;grid-template-columns:100px 1fr;gap:4px 8px}
+    .rrow span:nth-child(odd){color:#978D82;font-size:13px}
+    .rrow span:nth-child(even){color:#3F3930;font-size:13px;font-weight:500}
+
+    /* btn primary */
+    .btnp{padding:13px 28px;background:#3347CC;color:#fff;font-weight:700;border-radius:12px;
+          transition:all .2s;font-size:14px;box-shadow:0 4px 14px rgba(51,71,204,.3);
+          display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;font-family:inherit}
+    .btnp:hover{background:#2639A8;box-shadow:0 6px 20px rgba(51,71,204,.4);transform:translateY(-1px)}
+    .btnp:active{transform:none}
+    .btnp:disabled{opacity:.7;cursor:not-allowed;transform:none}
+    .btns{padding:13px 22px;background:#fff;color:#5A5049;font-weight:600;border-radius:12px;
+          border:1.5px solid #E2DDD8;transition:all .2s;font-size:14px;
+          display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit}
+    .btns:hover{background:#F7F6F4;border-color:#B8B0A5}
+ 
+</style>
+</head>
+<body>
+
+<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-ink-100">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between" style="height:60px">
+    <a href="#" class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-prime-500 flex items-center justify-center">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L12.8 7.6H18.2L13.7 11.2L15.5 17L10 13.5L4.5 17L6.3 11.2L1.8 7.6H7.2L10 2Z" fill="white"/>
+        </svg>
+      </div>
+      <span class="font-display text-xl text-ink-800 font-semibold">Lumière</span>
+    </a>
+    <div class="flex items-center gap-2 text-xs text-ink-400 font-medium">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <rect x="5" y="11" width="14" height="10" rx="2"/><path stroke-linecap="round" d="M8 11V7a4 4 0 018 0v4"/>
+      </svg>
+      256-bit SSL Encryption
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-7 pb-20">
+
+  <div id="progressBar" class="mb-7">
+    <div class="flex items-center justify-center max-w-lg mx-auto">
+   
+      <div class="pstep curr flex flex-col items-center" id="ps1">
+        <div class="pdot" id="pd1">1</div>
+        <span class="text-xs mt-1 font-semibold text-prime-500 hidden sm:block">Summary</span>
+      </div>
+      <div class="pline" id="pl1"></div>
+      
+      <div class="pstep flex flex-col items-center" id="ps2">
+        <div class="pdot" id="pd2">2</div>
+        <span class="text-xs mt-1 font-semibold text-ink-400 hidden sm:block">Details</span>
+      </div>
+      <div class="pline" id="pl2"></div>
+     
+      <div class="pstep flex flex-col items-center" id="ps3">
+        <div class="pdot" id="pd3">3</div>
+        <span class="text-xs mt-1 font-semibold text-ink-400 hidden sm:block">Address</span>
+      </div>
+      <div class="pline" id="pl3"></div>
+      
+      <div class="pstep flex flex-col items-center" id="ps4">
+        <div class="pdot" id="pd4">4</div>
+        <span class="text-xs mt-1 font-semibold text-ink-400 hidden sm:block">Payment</span>
+      </div>
+      <div class="pline" id="pl4"></div>
+    
+      <div class="pstep flex flex-col items-center" id="ps5">
+        <div class="pdot" id="pd5">5</div>
+        <span class="text-xs mt-1 font-semibold text-ink-400 hidden sm:block">Confirm</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <div class="lg:col-span-2 space-y-0">
+
+      <div class="step-panel active" id="step1">
+        <div class="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-prime-50 flex items-center justify-center flex-shrink-0">
+              <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-display text-2xl text-ink-800">Order Summary</h2>
+              <p class="text-sm text-ink-400">Review your items before checkout</p>
+            </div>
+          </div>
+
+          <div class="border border-ink-100 rounded-xl overflow-hidden mb-5">
+            <div class="flex items-center gap-4 p-4 border-b border-ink-100">
+              <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-prime-100 to-prime-200 flex items-center justify-center flex-shrink-0">
+                <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-ink-800 text-sm">Wireless Noise-Cancelling Headphones</p>
+                <p class="text-xs text-ink-400 mt-0.5">Matte Black · Qty: 1</p>
+                <span class="inline-block mt-1.5 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-semibold">In Stock</span>
+              </div>
+              <p class="font-bold text-ink-800 flex-shrink-0">$249.00</p>
+            </div>
+            <div class="flex items-center gap-4 p-4">
+              <div class="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(201,168,76,.18),rgba(154,117,32,.1))">
+                <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#B8922E" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-ink-800 text-sm">2-Year Extended Warranty</p>
+                <p class="text-xs text-ink-400 mt-0.5">Protection Plan · Qty: 1</p>
+                <span class="inline-block mt-1.5 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">Digital</span>
+              </div>
+              <p class="font-bold text-ink-800 flex-shrink-0">$29.00</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mb-2">
+            <input id="promoInput" type="text" class="fi flex-1" placeholder="Enter promo code…" style="padding:11px 14px" />
+            <button onclick="applyPromo()" class="px-4 py-2 bg-ink-100 hover:bg-ink-200 text-ink-700 font-semibold rounded-xl text-sm transition-colors flex-shrink-0">Apply</button>
+          </div>
+          <div id="promoMsg" class="hidden text-sm p-3 rounded-lg mb-4"></div>
+
+          <div class="flex justify-end mt-5">
+            <button class="btnp" onclick="goTo(2)">
+              Continue to Details
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-panel" id="step2">
+        <div class="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-prime-50 flex items-center justify-center flex-shrink-0">
+              <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-display text-2xl text-ink-800">Personal Details</h2>
+              <p class="text-sm text-ink-400">Your info for order confirmation &amp; delivery</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="fl">First Name *</label>
+              <input id="firstName" type="text" class="fi" placeholder="John"
+                oninput="lv(this,'firstName')" onblur="lv(this,'firstName')" />
+              <p class="em" id="e-firstName">Please enter your first name</p>
+            </div>
+            <div>
+              <label class="fl">Last Name *</label>
+              <input id="lastName" type="text" class="fi" placeholder="Doe"
+                oninput="lv(this,'lastName')" onblur="lv(this,'lastName')" />
+              <p class="em" id="e-lastName">Please enter your last name</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="fl">Email Address *</label>
+              <input id="email" type="email" class="fi" placeholder="john@example.com"
+                oninput="lv(this,'email')" onblur="lv(this,'email')" />
+              <p class="em" id="e-email">Please enter a valid email address</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="fl">Phone Number *</label>
+              <div class="flex gap-2">
+                <select id="dialCode" class="fi" style="width:auto;min-width:82px;flex-shrink:0;padding-left:10px">
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+961" selected>🇱🇧 +961</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+966">🇸🇦 +966</option>
+                  <option value="+20">🇪🇬 +20</option>
+                  <option value="+33">🇫🇷 +33</option>
+                  <option value="+49">🇩🇪 +49</option>
+                  <option value="+61">🇦🇺 +61</option>
+                </select>
+                <input id="phone" type="tel" class="fi flex-1" placeholder="76 123 456"
+                  oninput="fmtPhone(this);lv(this,'phone')" onblur="lv(this,'phone')" />
+              </div>
+              <p class="em" id="e-phone">Please enter a valid phone number (min 7 digits)</p>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mt-6">
+            <button class="btns" onclick="goTo(1,true)">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+              </svg>
+              Back
+            </button>
+            <button class="btnp" onclick="s2Submit()">
+              Continue to Address
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-panel" id="step3">
+        <div class="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-prime-50 flex items-center justify-center flex-shrink-0">
+              <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-display text-2xl text-ink-800">Shipping Address</h2>
+              <p class="text-sm text-ink-400">Where should we send your order?</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="fl">Street Address *</label>
+              <input id="address1" type="text" class="fi" placeholder="123 Main Street"
+                oninput="lv(this,'address1')" onblur="lv(this,'address1')" />
+              <p class="em" id="e-address1">Please enter your street address</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="fl">Apt, Suite, Floor <span class="text-ink-300 normal-case font-normal">(optional)</span></label>
+              <input id="address2" type="text" class="fi" placeholder="Apt 4B" />
+            </div>
+            <div>
+              <label class="fl">City *</label>
+              <input id="city" type="text" class="fi" placeholder="Beirut"
+                oninput="lv(this,'city')" onblur="lv(this,'city')" />
+              <p class="em" id="e-city">Please enter your city</p>
+            </div>
+            <div>
+              <label class="fl">State / Region *</label>
+              <input id="state" type="text" class="fi" placeholder="Mount Lebanon"
+                oninput="lv(this,'state')" onblur="lv(this,'state')" />
+              <p class="em" id="e-state">Please enter your state or region</p>
+            </div>
+            <div>
+              <label class="fl">ZIP / Postal Code *</label>
+              <input id="zip" type="text" class="fi" placeholder="1107 2020"
+                oninput="lv(this,'zip')" onblur="lv(this,'zip')" />
+              <p class="em" id="e-zip">Please enter a valid postal code</p>
+            </div>
+            <div>
+              <label class="fl">Country *</label>
+              <select id="country" class="fi"
+                onchange="lv(this,'country')">
+                <option value="">Select country…</option>
+                <option value="LB">Lebanon</option>
+                <option value="US">United States</option>
+                <option value="GB">United Kingdom</option>
+                <option value="AE">UAE</option>
+                <option value="SA">Saudi Arabia</option>
+                <option value="EG">Egypt</option>
+                <option value="JO">Jordan</option>
+                <option value="FR">France</option>
+                <option value="DE">Germany</option>
+                <option value="CA">Canada</option>
+                <option value="AU">Australia</option>
+              </select>
+              <p class="em" id="e-country">Please select your country</p>
+            </div>
+          </div>
+
+          <label class="flex items-start gap-3 mt-5 cursor-pointer select-none">
+            <input type="checkbox" id="billingSame" class="sr-only" checked onchange="toggleBillingCheck(this)" />
+            <div id="bsVis" class="w-5 h-5 rounded border-2 border-prime-500 bg-prime-500 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-sm text-ink-600">Billing address is the same as shipping address</span>
+          </label>
+
+          <div class="flex justify-between items-center mt-6">
+            <button class="btns" onclick="goTo(2,true)">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+              </svg>
+              Back
+            </button>
+            <button class="btnp" onclick="s3Submit()">
+              Continue to Payment
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-panel" id="step4">
+        <div class="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-prime-50 flex items-center justify-center flex-shrink-0">
+              <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2" stroke="#3347CC" stroke-width="2"/>
+                <path stroke-linecap="round" d="M2 10h20"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-display text-2xl text-ink-800">Payment Details</h2>
+              <p class="text-sm text-ink-400">Card info is AES-256 encrypted &amp; never stored</p>
+            </div>
+          </div>
+
+          <div class="card-scene mb-6">
+            <div class="card-3d" id="card3d">
+              <!-- Front -->
+              <div class="cface cfront p-5 flex flex-col justify-between">
+                <div class="cshine"></div>
+                <div class="flex justify-between items-start">
+                  <div class="w-10 h-7 rounded bg-gradient-to-br from-yellow-300 to-yellow-500 opacity-90"></div>
+                  <span id="cNet" class="text-white/80 font-bold text-sm tracking-widest"></span>
+                </div>
+                <div>
+                  <p class="font-mono text-white text-lg tracking-[.18em] mb-3" id="cNum">•••• •••• •••• ••••</p>
+                  <div class="flex justify-between items-end">
+                    <div>
+                      <p class="text-white/50 text-[10px] uppercase tracking-widest mb-0.5">Card Holder</p>
+                      <p class="text-white font-semibold text-sm uppercase tracking-wide" id="cName">FULL NAME</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-white/50 text-[10px] uppercase tracking-widest mb-0.5">Expires</p>
+                      <p class="text-white font-semibold text-sm" id="cExp">MM / YY</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Back -->
+              <div class="cface cback flex flex-col" style="padding:0">
+                <div class="cshine"></div>
+                <div class="w-full h-10 mt-8 bg-black/35"></div>
+                <div class="px-5 pt-4 pb-5">
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 h-8 rounded" style="background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 4px,transparent 4px,transparent 8px)"></div>
+                    <div class="bg-white rounded px-3 py-1.5 min-w-[52px] text-center">
+                      <span class="font-mono text-ink-800 text-sm font-bold" id="cCvv">•••</span>
+                    </div>
+                  </div>
+                  <p class="text-white/40 text-[10px] mt-1.5 text-right">Security Code (CVV)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="fl">Name on Card *</label>
+              <input id="cardName" type="text" class="fi" placeholder="John Doe"
+                oninput="syncName(this.value);lv(this,'cardName')" onblur="lv(this,'cardName')" />
+              <p class="em" id="e-cardName">Please enter the cardholder name</p>
+            </div>
+            <div>
+              <label class="fl">Card Number *</label>
+              <div class="relative">
+                <input id="cardNumber" type="text" class="fi" placeholder="1234  5678  9012  3456"
+                  maxlength="19" oninput="fmtCardNum(this);lv(this,'cardNumber')" onblur="lv(this,'cardNumber')" style="padding-right:90px"/>
+                <!-- Card type indicators -->
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1.5 items-center">
+                  <svg id="iVisa" width="38" height="12" viewBox="0 0 38 12" opacity=".25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <text x="0" y="11" font-family="Arial" font-size="14" font-weight="900" fill="#1A1F71">VISA</text>
+                  </svg>
+                  <!-- MC circles -->
+                  <svg id="iMC" width="26" height="16" viewBox="0 0 26 16" opacity=".25">
+                    <circle cx="9" cy="8" r="8" fill="#EB001B"/>
+                    <circle cx="17" cy="8" r="8" fill="#F79E1B"/>
+                    <path d="M13 3.4a8 8 0 000 9.2A8 8 0 0013 3.4z" fill="#FF5F00"/>
+                  </svg>
+                  <!-- AMEX -->
+                  <svg id="iAmex" width="26" height="16" viewBox="0 0 26 16" opacity=".25">
+                    <rect width="26" height="16" rx="2" fill="#2557D6"/>
+                    <text x="3" y="12" font-family="Arial" font-size="8" font-weight="900" fill="white">AMEX</text>
+                  </svg>
+                </div>
+              </div>
+              <p class="em" id="e-cardNumber">Please enter a valid card number</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="fl">Expiry *</label>
+                <input id="cardExpiry" type="text" class="fi" placeholder="MM / YY" maxlength="7"
+                  oninput="fmtExp(this);lv(this,'cardExpiry')" onblur="lv(this,'cardExpiry')" />
+                <p class="em" id="e-cardExpiry">Please enter a valid expiry date</p>
+              </div>
+              <div>
+                <label class="fl flex items-center gap-1">
+                  CVV *
+                  <span class="tip">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#978D82" stroke-width="2" class="cursor-help">
+                      <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4m0-4h.01"/>
+                    </svg>
+                    <span class="tip-box">3 digits on back of card. For Amex: 4 digits on front.</span>
+                  </span>
+                </label>
+                <input id="cardCvv" type="text" class="fi" placeholder="•••" maxlength="4"
+                  oninput="syncCvv(this.value);lv(this,'cardCvv')"
+                  onfocus="flipCard(true)" onblur="flipCard(false);lv(this,'cardCvv')" />
+                <p class="em" id="e-cardCvv">Please enter a valid CVV</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accepted networks -->
+          <div class="flex items-center gap-2.5 mt-5 pt-4 border-t border-ink-100">
+            <p class="text-xs text-ink-400 mr-1">Accepted:</p>
+            <div class="flex gap-1.5">
+              <div class="bg-prime-800 rounded px-2 py-1"><span class="text-white font-bold text-xs tracking-wider">VISA</span></div>
+              <div class="rounded overflow-hidden flex">
+                <div style="background:#EB001B;width:16px;height:20px"></div>
+                <div style="background:#F79E1B;width:16px;height:20px"></div>
+              </div>
+              <div class="bg-blue-600 rounded px-2 py-1"><span class="text-white font-bold text-xs">AMEX</span></div>
+              <div class="bg-orange-400 rounded px-2 py-1"><span class="text-white font-bold text-xs">DISC</span></div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mt-6">
+            <button class="btns" onclick="goTo(3,true)">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+              </svg>
+              Back
+            </button>
+            <button class="btnp" onclick="s4Submit()">
+              Review Order
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── STEP 5 · CONFIRM ─────────────── -->
+      <div class="step-panel" id="step5">
+        <div class="bg-white rounded-2xl shadow-card p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-prime-50 flex items-center justify-center flex-shrink-0">
+              <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-display text-2xl text-ink-800">Review &amp; Confirm</h2>
+              <p class="text-sm text-ink-400">Double-check everything before placing your order</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 mb-5">
+            <!-- Personal -->
+            <div class="card-outer">
+              <div class="flex justify-between items-center mb-2.5">
+                <h3 class="text-xs font-bold text-ink-500 uppercase tracking-wider">Personal</h3>
+                <button onclick="goTo(2,true)" class="text-prime-500 hover:text-prime-700 text-xs font-bold transition-colors">Edit</button>
+              </div>
+              <div class="rrow">
+                <span>Name</span><span id="rv-name">—</span>
+                <span>Email</span><span id="rv-email" class="truncate">—</span>
+                <span>Phone</span><span id="rv-phone">—</span>
+              </div>
+            </div>
+            <!-- Address -->
+            <div class="card-outer">
+              <div class="flex justify-between items-center mb-2.5">
+                <h3 class="text-xs font-bold text-ink-500 uppercase tracking-wider">Shipping Address</h3>
+                <button onclick="goTo(3,true)" class="text-prime-500 hover:text-prime-700 text-xs font-bold transition-colors">Edit</button>
+              </div>
+              <p class="text-sm text-ink-700 font-medium leading-snug" id="rv-addr">—</p>
+            </div>
+            <!-- Payment -->
+            <div class="card-outer">
+              <div class="flex justify-between items-center mb-2.5">
+                <h3 class="text-xs font-bold text-ink-500 uppercase tracking-wider">Payment</h3>
+                <button onclick="goTo(4,true)" class="text-prime-500 hover:text-prime-700 text-xs font-bold transition-colors">Edit</button>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-6 rounded bg-gradient-to-r from-prime-600 to-prime-500 flex items-center justify-center">
+                  <svg width="16" height="10" fill="none" viewBox="0 0 24 14">
+                    <rect x="1" y="1" width="22" height="12" rx="2" stroke="white" stroke-width="1.5"/>
+                    <line x1="1" y1="5" x2="23" y2="5" stroke="white" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <span class="text-sm text-ink-700 font-semibold font-mono" id="rv-card">•••• •••• •••• ••••</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms -->
+          <label class="flex items-start gap-3 cursor-pointer select-none">
+            <input type="checkbox" id="agreeTerms" class="sr-only" onchange="toggleTermsCheck(this)" />
+            <div id="tVis" class="w-5 h-5 rounded border-2 border-ink-300 bg-white flex items-center justify-center flex-shrink-0 mt-0.5 transition-all">
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3" class="hidden" id="tCheck">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <span class="text-sm text-ink-600 leading-relaxed">I agree to the <a href="#" class="text-prime-500 font-semibold hover:underline" onclick="return false">Terms of Service</a> &amp; <a href="#" class="text-prime-500 font-semibold hover:underline" onclick="return false">Privacy Policy</a>, and confirm the details above are correct.</span>
+          </label>
+          <p class="em mt-1" id="e-terms">Please accept the terms to continue</p>
+
+          <div class="flex justify-between items-center mt-6">
+            <button class="btns" onclick="goTo(4,true)">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+              </svg>
+              Back
+            </button>
+            <button class="btnp" id="placeBtn" onclick="placeOrder()">
+              <span id="placeTxt">Place Order · <span id="placeTotalInBtn">$292.15</span></span>
+              <div class="spin" id="placeSpinner"></div>
+              <svg id="placeArrow" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── SUCCESS STATE ─────────────── -->
+      <div class="step-panel" id="stepSuccess">
+        <div class="bg-white rounded-2xl shadow-card p-8 sm:p-14 text-center">
+          <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5 pop">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#16A34A" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h2 class="font-display text-3xl text-ink-800 mb-2 fu0">Order Confirmed!</h2>
+          <p class="text-ink-400 fu1 mb-1">Thank you for your purchase. A confirmation has been sent to</p>
+          <p class="text-prime-500 font-semibold fu1 mb-6" id="sEmail">your email</p>
+          <div class="inline-block bg-ink-50 rounded-xl px-6 py-4 mb-8 fu2">
+            <p class="text-xs text-ink-400 mb-1 uppercase tracking-widest font-semibold">Order Number</p>
+            <p class="font-mono font-bold text-ink-700 text-xl" id="sOrderNum">#LUM-XXXXXX</p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center fu3">
+            <button class="btnp" onclick="resetAll()">Continue Shopping</button>
+            <button class="btns" onclick="window.print()">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              Print Receipt
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────── FAILURE STATE ─────────────── -->
+      <div class="step-panel" id="stepFailure">
+        <div class="bg-white rounded-2xl shadow-card p-8 sm:p-14 text-center">
+          <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 pop">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#DC2626" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </div>
+          <h2 class="font-display text-3xl text-ink-800 mb-2 fu0">Payment Declined</h2>
+          <p class="text-ink-400 fu1 mb-2 max-w-sm mx-auto" id="fMsg">Your card was declined. Please check your details and try again, or use a different card.</p>
+          <p class="text-xs text-ink-300 fu1 mb-8">Error code: CARD_DECLINED · <span id="fTime"></span></p>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center fu2">
+            <button class="btnp" onclick="goTo(4,true)">Try Again</button>
+            <button class="btns" onclick="goTo(4,true)">Use Different Card</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end left col -->
+
+    <!-- ══════════════ RIGHT COLUMN (Order Sidebar) ══════════════ -->
+    <div class="lg:col-span-1">
+      <div class="bg-white rounded-2xl shadow-card p-6 lg:sticky lg:top-20">
+        <h3 class="font-display text-lg text-ink-800 mb-4">Your Order</h3>
+
+        <div class="space-y-3 pb-4 border-b border-ink-100 mb-4">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-prime-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#3347CC" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.1-1.34 2-3 2s-3-.9-3-2 1.34-2 3-2 3 .9 3 2zm12-3c0 1.1-1.34 2-3 2s-3-.9-3-2 1.34-2 3-2 3 .9 3 2z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-ink-700 font-semibold leading-tight">Wireless Headphones</p>
+              <p class="text-xs text-ink-400">Matte Black · ×1</p>
+            </div>
+            <span class="text-sm font-bold text-ink-800 flex-shrink-0">$249.00</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style="background:rgba(201,168,76,.12)">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#B8922E" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-ink-700 font-semibold leading-tight">Extended Warranty</p>
+              <p class="text-xs text-ink-400">2-Year Plan · ×1</p>
+            </div>
+            <span class="text-sm font-bold text-ink-800 flex-shrink-0">$29.00</span>
+          </div>
+        </div>
+
+        <div class="space-y-2 pb-4 border-b border-ink-100 mb-4 text-sm">
+          <div class="flex justify-between">
+            <span class="text-ink-400">Subtotal</span>
+            <span class="text-ink-600 font-medium" id="sb-sub">$278.00</span>
+          </div>
+          <div class="flex justify-between hidden" id="sb-discRow">
+            <span class="text-green-600">Discount (<span id="sb-pct"></span>)</span>
+            <span class="text-green-600 font-semibold" id="sb-disc">–$0.00</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-ink-400">Shipping</span>
+            <span class="text-green-600 font-semibold">Free</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-ink-400">Tax (5%)</span>
+            <span class="text-ink-600 font-medium" id="sb-tax">$13.90</span>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-baseline mb-5">
+          <span class="font-bold text-ink-700">Total</span>
+          <span class="font-display text-2xl text-ink-800" id="sb-total">$291.90</span>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-xs text-ink-400">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#16A34A" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            SSL encrypted checkout
+          </div>
+          <div class="flex items-center gap-2 text-xs text-ink-400">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#16A34A" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            30-day free returns
+          </div>
+          <div class="flex items-center gap-2 text-xs text-ink-400">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#16A34A" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Express 2–3 day delivery
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end grid -->
+</main>
+<!-- ===== FOOTER ===== -->
+<footer class="bg-white border-t border-ink-100 mt-20">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+
+      <!-- Brand -->
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-prime-500 flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2L12.8 7.6H18.2L13.7 11.2L15.5 17L10 13.5L4.5 17L6.3 11.2L1.8 7.6H7.2L10 2Z" fill="white"/>
+            </svg>
+          </div>
+          <span class="font-display text-xl text-ink-800 font-semibold">
+            Lumière
+          </span>
+        </div>
+
+        <p class="text-sm text-ink-400 max-w-md">
+          Premium electronics and accessories with secure checkout,
+          fast delivery, and dedicated customer support.
+        </p>
+      </div>
+
+      <!-- Support -->
+      <div>
+        <h4 class="font-semibold text-ink-800 mb-3">Support</h4>
+        <ul class="space-y-2 text-sm text-ink-500">
+          <li><a href="#" class="hover:text-prime-500">Help Center</a></li>
+          <li><a href="#" class="hover:text-prime-500">Contact Us</a></li>
+          <li><a href="#" class="hover:text-prime-500">Returns</a></li>
+          <li><a href="#" class="hover:text-prime-500">Shipping</a></li>
+        </ul>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <h4 class="font-semibold text-ink-800 mb-3">Legal</h4>
+        <ul class="space-y-2 text-sm text-ink-500">
+          <li><a href="#" class="hover:text-prime-500">Privacy Policy</a></li>
+          <li><a href="#" class="hover:text-prime-500">Terms of Service</a></li>
+          <li><a href="#" class="hover:text-prime-500">Cookies</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Bottom -->
+    <div class="border-t border-ink-100 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+
+      <p class="text-sm text-ink-400">
+        © 2026 Lumière. All rights reserved.
+      </p>
+
+      <div class="flex items-center gap-4 text-ink-400">
+        <span class="text-xs">SSL Secure Checkout</span>
+        <span class="text-xs">•</span>
+        <span class="text-xs">Visa</span>
+        <span class="text-xs">Mastercard</span>
+        <span class="text-xs">Amex</span>
+      </div>
+
+    </div>
+
+  </div>
+</footer>
+
+
+</body>
+</html>
